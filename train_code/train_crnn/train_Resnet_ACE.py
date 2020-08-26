@@ -11,7 +11,6 @@ from warpctc_pytorch import CTCLoss
 # from torch.nn import CTCLoss
 import utils2
 import mydataset
-import crnn as crnn
 import config
 from online_test2 import val_model
 from ACELoss import ACE
@@ -26,14 +25,14 @@ config.val_infofile = 'path_to_test_infofile.txt'
 config.keep_ratio = True
 config.use_log = True
 config.pretrained_model = 'resnet-ACE.pth'
-config.batchSize = 512
+config.batchSize = 128
 config.workers = 24
 config.adam = True
 
 config.imgH = 30
 config.imgW = 30
 criterion = ACE()
-config.lr = 0.0005
+config.lr = 0.0003
 import os
 import datetime
 
@@ -107,22 +106,22 @@ class Resnet(nn.Module):
 
 resnet = Resnet()
 
-if config.pretrained_model!='' and os.path.exists(config.pretrained_model):
-    print('loading pretrained model from %s' % config.pretrained_model)
-    resnet.load_state_dict(torch.load(config.saved_model_dir+'/'+config.pretrained_model))
-else:
-    resnet.apply(weights_init)
+# if config.pretrained_model!='' and os.path.exists(config.pretrained_model):
+#     print('loading pretrained model from %s' % config.pretrained_model)
+#     resnet.load_state_dict(torch.load(config.saved_model_dir+'/'+config.pretrained_model))
+# else:
+resnet.apply(weights_init)
 
 # image = torch.FloatTensor(config.batchSize, 3, config.imgH, config.imgH)
 # text = torch.IntTensor(config.batchSize * 5)
 # length = torch.IntTensor(config.batchSize)
 device = torch.device('cpu')
-# if config.cuda:
-#     resnet.cuda()
-#     # crnn = torch.nn.DataParallel(crnn, device_ids=range(opt.ngpu))
-#     # image = image.cuda()
-#     device = torch.device('cuda:0')
-#     # criterion = criterion.cuda()
+if config.cuda:
+    resnet.cuda()
+    # crnn = torch.nn.DataParallel(crnn, device_ids=range(opt.ngpu))
+    # image = image.cuda()
+    device = torch.device('cuda:0')
+    # criterion = criterion.cuda()
 
 # image = Variable(image)
 # text = Variable(text)
@@ -154,9 +153,9 @@ def val(net, dataset, criterion, max_iter=100):
     global best_acc
     if accuracy > best_acc:
         best_acc = accuracy
-        torch.save(crnn.state_dict(), '{}/{}_{}_{}.pth'.format(config.saved_model_dir, config.saved_model_prefix, epoch,
+        torch.save(resnet.state_dict(), '{}/{}_{}_{}.pth'.format(config.saved_model_dir, config.saved_model_prefix, epoch,
                                                                int(best_acc * 1000)))
-    torch.save(crnn.state_dict(), '{}/{}.pth'.format(config.saved_model_dir, config.saved_model_prefix))
+    torch.save(resnet.state_dict(), '{}/{}.pth'.format(config.saved_model_dir, config.saved_model_prefix))
 
 
 def trainBatch(net, criterion, optimizer):
