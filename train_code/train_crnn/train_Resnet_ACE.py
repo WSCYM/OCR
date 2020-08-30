@@ -20,8 +20,8 @@ import torchvision.models as models
 config.alphabet = config.alphabet_v2
 config.nclass = len(config.alphabet) + 1
 config.saved_model_prefix = 'resnet-ACE'
-config.train_infofile = ['path_to_train_infofile1.txt','path_to_train_infofile2.txt']
-config.val_infofile = 'path_to_test_infofile.txt'
+config.train_infofile = ['train_label1.txt','train_label2.txt']
+config.val_infofile = 'test_label.txt'
 config.keep_ratio = True
 config.use_log = True
 config.pretrained_model = 'resnet-ACE.pth'
@@ -32,7 +32,7 @@ config.adam = True
 config.imgH = 30
 config.imgW = 30
 criterion = ACE()
-config.lr = 0.0003
+config.lr = 0.0007
 import os
 import datetime
 
@@ -75,7 +75,7 @@ test_dataset = mydataset.MyDataset(
 
 converter = utils2.strLabelConverter(config.alphabet)
 # criterion = CTCLoss(reduction='sum',zero_infinity=True)
-best_acc = 0.5
+best_acc = 0.7
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -138,6 +138,8 @@ elif config.adadelta:
 else:
     optimizer = optim.RMSprop(resnet.parameters(), lr=config.lr)
 
+scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=5,gamma = 0.8)
+
 def val(net, dataset, criterion, max_iter=100):
     print('Start val')
     # for p in net.parameters():
@@ -185,11 +187,14 @@ for epoch in range(100):
     loss_avg.reset()
     print('epoch {}....'.format(epoch))
     train_iter = iter(train_loader)
+
+    scheduler.step()
+
     i = 0
     n_batch = len(train_loader)
     while i < len(train_loader):
         cost = trainBatch(resnet, criterion, optimizer)
-        print('epoch: {} iter: {}/{} Train loss: {:.10f}'.format(epoch, i, n_batch, cost.item()))
+        print('epoch: {} iter: {}/{} Train loss: {:.10f}'.format(epoch, i, n_batch, cost.item())+', lr={}'.format(scheduler.get_last_lr()))
         loss_avg.add(cost)
         loss_avg.add(cost)
         i += 1
@@ -200,5 +205,6 @@ for epoch in range(100):
 
     if (epoch % 5 == 0 and epoch!=0):
         val(resnet, test_dataset, criterion)
+        print('lr={}'.format(scheduler.get_last_lr()))
 
 
